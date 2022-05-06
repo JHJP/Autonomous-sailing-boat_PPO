@@ -10,6 +10,7 @@ public class MoveToGoalAgent : Agent
 {
     
     [SerializeField] private Transform targetTransform;
+    [SerializeField] private Transform WeatherVaneTransform;
     // for the easier visalization of success and fail
     [SerializeField] private Material winMaterial;
     [SerializeField] private Material loseMaterial;
@@ -28,6 +29,8 @@ public class MoveToGoalAgent : Agent
         sensor.AddObservation(transform.localPosition);
         sensor.AddObservation(transform.rotation);
         sensor.AddObservation(targetTransform.localPosition);
+        sensor.AddObservation(WeatherVaneTransform.localPosition.x);
+        sensor.AddObservation(WeatherVaneTransform.localPosition.z);
     }
     public override void OnEpisodeBegin()
     {
