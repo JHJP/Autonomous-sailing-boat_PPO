@@ -17,8 +17,8 @@ public class MoveToGoalAgent : Agent
     [SerializeField] private MeshRenderer[] floorMeshRenderer;
 
     Rigidbody agentRigidbody;
-    public float SteerPower = 500f;
-    public float Power = 5f;
+    public float steerPower = 500f;
+    public float motorPower = 5f;
 
     public override void Initialize() {
         agentRigidbody = gameObject.GetComponent<Rigidbody>();
@@ -40,17 +40,46 @@ public class MoveToGoalAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        float moveSteer = actions.ContinuousActions[0];
-        float moveMotor = actions.ContinuousActions[1];
-        agentRigidbody.AddTorque(0f, moveSteer*SteerPower*Time.deltaTime, 0f);
-		agentRigidbody.AddForce(transform.forward*moveMotor*Power*Time.deltaTime);
+        int moveSteer = actions.DiscreteActions[0];
+        int moveMotor = actions.DiscreteActions[1];
+
+        float addForceToSteer = 0f;
+        float addForceToMotor = 0f;
+
+        switch (moveSteer) {
+            case 0: addForceToSteer = 0f; break;
+            case 1: addForceToSteer = 1f; break;
+            case 2: addForceToSteer = -1f; break;
+        }
+        switch (moveMotor) {
+            case 0: addForceToMotor = 0f; break;
+            case 1: addForceToMotor = 1f; break;
+            case 2: addForceToMotor = -1f; break;
+        }
+        // float moveSteer = actions.ContinuousActions[0];
+        // float moveMotor = actions.ContinuousActions[1];
+        agentRigidbody.AddTorque(0f, addForceToSteer*steerPower*Time.deltaTime, 0f);
+		agentRigidbody.AddForce(transform.forward*addForceToMotor*motorPower*Time.deltaTime);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        ActionSegment<float> continuousActions = actionsOut.ContinuousActions;
-        continuousActions[0] = Input.GetAxisRaw("Horizontal");
-        continuousActions[1] = Input.GetAxisRaw("Vertical");
+
+        // ActionSegment<float> continuousActions = actionsOut.ContinuousActions;
+        // continuousActions[0] = Input.GetAxisRaw("Horizontal");
+        // continuousActions[1] = Input.GetAxisRaw("Vertical");
+        ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
+        switch (Mathf.RoundToInt(Input.GetAxisRaw("Horizontal"))) {
+            case 0: discreteActions[0] = 0; break;
+            case 1: discreteActions[0] = 1; break;
+            case -1: discreteActions[0] = 2; break;
+        }
+        switch (Mathf.RoundToInt(Input.GetAxisRaw("Vertical"))) {
+            case 0: discreteActions[1] = 0; break;
+            case 1: discreteActions[1] = 1; break;
+            case -1: discreteActions[1] = 2; break;
+        }
+        
     }
 
     public void OnTriggerEnter(Collider other) {

@@ -2,28 +2,46 @@
     "MoveToGoal": {
         "checkpoints": [
             {
-                "steps": 373013,
-                "file_path": "results\\TestParameters\\MoveToGoal\\MoveToGoal-373013.onnx",
-                "reward": null,
-                "creation_time": 1651820831.0999627,
+                "steps": 499994,
+                "file_path": "results\\TestParameters\\MoveToGoal\\MoveToGoal-499994.onnx",
+                "reward": 0.0,
+                "creation_time": 1652191909.8554432,
                 "auxillary_file_paths": [
-                    "results\\TestParameters\\MoveToGoal\\MoveToGoal-373013.pt"
+                    "results\\TestParameters\\MoveToGoal\\MoveToGoal-499994.pt"
+                ]
+            },
+            {
+                "steps": 999940,
+                "file_path": "results\\TestParameters\\MoveToGoal\\MoveToGoal-999940.onnx",
+                "reward": null,
+                "creation_time": 1652197910.3359113,
+                "auxillary_file_paths": [
+                    "results\\TestParameters\\MoveToGoal\\MoveToGoal-999940.pt"
+                ]
+            },
+            {
+                "steps": 1000004,
+                "file_path": "results\\TestParameters\\MoveToGoal\\MoveToGoal-1000004.onnx",
+                "reward": null,
+                "creation_time": 1652197910.418709,
+                "auxillary_file_paths": [
+                    "results\\TestParameters\\MoveToGoal\\MoveToGoal-1000004.pt"
                 ]
             }
         ],
         "final_checkpoint": {
-            "steps": 373013,
+            "steps": 1000004,
             "file_path": "results\\TestParameters\\MoveToGoal.onnx",
             "reward": null,
-            "creation_time": 1651820831.0999627,
+            "creation_time": 1652197910.418709,
             "auxillary_file_paths": [
-                "results\\TestParameters\\MoveToGoal\\MoveToGoal-373013.pt"
+                "results\\TestParameters\\MoveToGoal\\MoveToGoal-1000004.pt"
             ]
         }
     },
     "metadata": {
         "stats_format_version": "0.3.0",
-        "mlagents_version": "0.29.0",
+        "mlagents_version": "0.28.0",
         "torch_version": "1.11.0+cu113"
     }
 }
