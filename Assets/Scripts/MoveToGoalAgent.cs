@@ -34,8 +34,9 @@ public class MoveToGoalAgent : Agent
     }
     public override void OnEpisodeBegin()
     {
-        transform.localPosition = Vector3.zero;
+        transform.localPosition = new Vector3(Random.Range(-7f, 9f), 0f, Random.Range(-7f, 9f));
         transform.rotation = Quaternion.identity;
+        targetTransform.localPosition = new Vector3(Random.Range(-17f, 2f), -1.52f, Random.Range(-7f, 12f));
     }
 
     public override void OnActionReceived(ActionBuffers actions)
