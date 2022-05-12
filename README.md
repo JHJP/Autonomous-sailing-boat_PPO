@@ -1,5 +1,10 @@
 ![image](https://user-images.githubusercontent.com/78130703/168079365-a2f7700d-7449-4f7f-83ff-75bf58ca11e4.png)
 
+# versions
+1. unity editor : 2020.3.30f1
+2. python : 3.9.9
+3. ml-agents : 2.3.0-exp.2
+
 # Autonomous-sailing-boat_DQN
 unity, ml agents, DQN, PPO
 
