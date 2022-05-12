@@ -1,3 +1,5 @@
+![image](https://user-images.githubusercontent.com/78130703/168079365-a2f7700d-7449-4f7f-83ff-75bf58ca11e4.png)
+
 # Autonomous-sailing-boat_DQN
 unity, ml agents, DQN, PPO
 
