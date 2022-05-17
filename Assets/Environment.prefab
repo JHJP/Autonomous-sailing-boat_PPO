@@ -1544,9 +1544,9 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: db4c6b9f197be4646925b533863f1d80, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: 07d04ab41cae2c04f8b8875dee2d62b6, type: 3}
   m_InferenceDevice: 0
-  m_BehaviorType: 0
+  m_BehaviorType: 2
   m_BehaviorName: MoveToGoal
   TeamId: 0
   m_UseChildSensors: 1
