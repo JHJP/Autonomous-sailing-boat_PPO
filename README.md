@@ -5,8 +5,8 @@
 2. python : 3.9.9
 3. ml-agents : 2.3.0-exp.2
 
-# Autonomous-sailing-boat_DQN
-unity, ml agents, DQN, PPO
+# Autonomous-sailing-boat_PPO
+unity, ml agents, PPO
 
 # Simulation environment conditions
 1. random wind direction and random wind power
