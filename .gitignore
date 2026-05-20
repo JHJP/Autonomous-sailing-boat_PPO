@@ -8,6 +8,13 @@
 /[Bb]uild/
 /[Bb]uilds/
 /[Ll]ogs/
+
+# Training run outputs — reproducible; PPO run_logs alone are ~480MB/seed.
+# Trained policies + eval evidence preserved separately in ../analysis/ (root repo).
+/results/
+.DS_Store
+__pycache__/
+*.pyc
 /[Uu]ser[Ss]ettings/
 /venv/
 

@@ -1,0 +1,38 @@
+# SAC (discrete-action) config for MoveToGoal sailboat agent.
+# ML-Agents Release 20 / mlagents 0.30.
+# Mirrors v1 moveToGoal.yaml on shared hyperparameters (gamma, hidden_units, num_layers, max_steps, time_horizon)
+# so PPO vs SAC vs Rainbow comparison is fair on the network capacity and discount.
+# SAC-specific hyperparameters tuned for DISCRETE action space (see ML-Agents Training-Configuration-File.md).
+
+behaviors:
+  MoveToGoal:
+    trainer_type: sac
+    max_steps: 5000000
+    time_horizon: 64
+    summary_freq: 2000
+    keep_checkpoints: 5
+    checkpoint_interval: 500000
+
+    hyperparameters:
+      # Discrete-action SAC: smaller batch + lower init_entcoef than continuous
+      learning_rate: 3.0e-4
+      learning_rate_schedule: constant   # SAC keeps LR constant (unlike PPO's linear decay)
+      batch_size: 128                    # discrete range 32-512; mid value
+      buffer_size: 500000                # 500k transitions; balance memory vs staleness
+      buffer_init_steps: 5000            # random-policy warmup before training begins
+      init_entcoef: 0.1                  # discrete range 0.05-0.5; mid-low value
+      tau: 0.005                         # target net Polyak update rate
+      steps_per_update: 10               # # of env steps per gradient update
+      reward_signal_steps_per_update: 10
+      save_replay_buffer: false
+
+    network_settings:
+      normalize: false                   # match v1 PPO setting
+      hidden_units: 128                  # match v1 PPO
+      num_layers: 2                      # match v1 PPO
+      vis_encode_type: simple
+
+    reward_signals:
+      extrinsic:
+        strength: 1.0
+        gamma: 0.99                      # match v1 PPO
