@@ -1,8 +1,8 @@
 """Regenerate the v1 network-architecture diagrams at 300 DPI (no Unity needed).
 
 Replaces the low-res (~96 DPI) v1 figures:
-    fig_policy_net.png  <- v1 Figure 7 (policy network)  -- FAITHFUL 11-d input / 2-branch out
-    fig_value_net.png   <- v1 Figure 8 (value network)   -- FAITHFUL 11-d input / scalar out
+    fig_policy_net.png  <- v1 Figure 7 (policy network)  -- FAITHFUL 12-d input / 2-branch out
+    fig_value_net.png   <- v1 Figure 8 (value network)   -- FAITHFUL 12-d input / scalar out
 
 Out of scope here (user supplies own high-res from PPTX): the RL agent-environment loop
 (v1 Fig 1) and the PPO training pipeline (v1 Fig 6). Unity-screenshot figures (env, boat
@@ -33,20 +33,21 @@ NODE_FC = "#e8643c"   # warm accent for network nodes (CVD-safe vs black text)
 
 # ──────────────────── Fig 7 / 8: network architecture (faithful) ────────────────────
 
-# True effective observation = 11 floats (see MoveToGoalAgent.cs + Environment.prefab):
-#   boat localPosition (3) + orientation quaternion (4) + target localPosition (3) + vane.x (1).
-# (Emitted 12; trailing vane.z truncated by VectorObservationSize=11.)
+# True observation = 12 floats (see MoveToGoalAgent.cs + Environment.prefab):
+#   boat localPosition (3) + orientation quaternion (4) + target localPosition (3)
+#   + weather-vane x, z (2) = full 2-D wind direction.
+# (VectorObservationSize=12 since 2026-05-22; earlier builds set 11 and truncated vane.z.)
 INPUT_LABELS = [
     r"$x^{b}$", r"$y^{b}$", r"$z^{b}$",
     r"$q_x$", r"$q_y$", r"$q_z$", r"$q_w$",
     r"$x^{d}$", r"$y^{d}$", r"$z^{d}$",
-    r"$v_x$",
+    r"$v_x$", r"$v_z$",
 ]
 INPUT_GROUPS = [  # (start_idx, end_idx_inclusive, label)
     (0, 2, "boat\nposition (3)"),
     (3, 6, "orientation\n(quaternion, 4)"),
     (7, 9, "destination (3)"),
-    (10, 10, "wind dir.\n($v_x$, 1)"),
+    (10, 11, "wind dir.\n($v_x, v_z$, 2)"),
 ]
 
 
@@ -99,7 +100,7 @@ def _draw_net(ax, output_nodes_y, output_labels, output_group_labels):
     for (gy0, gy1, glab) in output_group_labels:
         ax.text(xs[3] + 1.35, (gy0 + gy1) / 2, glab, ha="left", va="center", fontsize=9.5)
 
-    ax.text(xs[0], n_in + 0.9, "input (11)", ha="center", fontsize=10)
+    ax.text(xs[0], n_in + 0.9, f"input ({n_in})", ha="center", fontsize=10)
     ax.set_xlim(-3.0, 7.2); ax.set_ylim(-0.5, n_in + 1.4)
     ax.axis("off")
 
