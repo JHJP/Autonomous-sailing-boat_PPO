@@ -38,9 +38,9 @@ NODE_FC = "#e8643c"   # warm accent for network nodes (CVD-safe vs black text)
 #   + weather-vane x, z (2) = full 2-D wind direction.
 # (VectorObservationSize=12 since 2026-05-22; earlier builds set 11 and truncated vane.z.)
 INPUT_LABELS = [
-    r"$x^{b}$", r"$y^{b}$", r"$z^{b}$",
+    r"$b_x$", r"$b_y$", r"$b_z$",
     r"$q_x$", r"$q_y$", r"$q_z$", r"$q_w$",
-    r"$x^{d}$", r"$y^{d}$", r"$z^{d}$",
+    r"$d_x$", r"$d_y$", r"$d_z$",
     r"$v_x$", r"$v_z$",
 ]
 INPUT_GROUPS = [  # (start_idx, end_idx_inclusive, label)
