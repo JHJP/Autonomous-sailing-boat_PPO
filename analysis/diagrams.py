@@ -47,7 +47,7 @@ INPUT_GROUPS = [  # (start_idx, end_idx_inclusive, label)
     (0, 2, "boat\nposition (3)"),
     (3, 6, "orientation\n(quaternion, 4)"),
     (7, 9, "destination (3)"),
-    (10, 11, "wind dir.\n($v_x, v_z$, 2)"),
+    (10, 11, "wind\ndirection (2)"),
 ]
 
 
