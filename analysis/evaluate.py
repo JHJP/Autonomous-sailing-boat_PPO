@@ -80,7 +80,7 @@ class OnnxPolicy:
 class RainbowPthPolicy:
     """Tianshou Rainbow .pth inference (eval mode → NoisyLinear noise off)."""
     path: Path
-    obs_dim: int = 11
+    obs_dim: int = 12
     n_actions: int = 9
     hidden_sizes: tuple = (128, 128)
     num_atoms: int = 51
@@ -90,6 +90,12 @@ class RainbowPthPolicy:
     device: str = "cpu"
 
     def __post_init__(self):
+        ckpt = torch.load(self.path, map_location=self.device, weights_only=False)
+        ckpt_sd = ckpt["policy"]
+        # Infer input dim from the first feature layer so the net always matches
+        # the checkpoint's observation size (avoids 11 vs 12 obs-size desync).
+        self.obs_dim = int(ckpt_sd["model.model.model.0.weight"].shape[1])
+
         def noisy_linear(x, y):
             return NoisyLinear(x, y, noisy_std=self.noisy_std)
 
@@ -114,8 +120,7 @@ class RainbowPthPolicy:
             eps_training=0.0,
             eps_inference=0.0,
         ).to(self.device)
-        ckpt = torch.load(self.path, map_location=self.device, weights_only=False)
-        self.policy.load_state_dict(ckpt["policy"])
+        self.policy.load_state_dict(ckpt_sd)
         self.policy.eval()  # disable NoisyLinear noise
 
     def predict(self, obs: np.ndarray) -> np.ndarray:
@@ -143,9 +148,9 @@ def classify(reward: float, interrupted: bool, goal_threshold: float = 0.5, wall
     return "timeout"  # fallback (shouldn't trigger given sparse ±1 reward)
 
 
-# obs layout (11-d effective; see MoveToGoalAgent.cs CollectObservations):
+# obs layout (12-d; see MoveToGoalAgent.cs CollectObservations):
 #   [0,1,2] boat localPosition (x,y,z) ; [3-6] rotation quat ; [7,8,9] target localPosition ;
-#   [10] WeatherVane.x ([11] WeatherVane.z truncated by VectorObservationSize=11).
+#   [10] WeatherVane.x ; [11] WeatherVane.z (both retained since VectorObservationSize=12).
 # Boat moves in the x-z plane → 2D = (obs[0], obs[2]); destination = (obs[7], obs[9]).
 OBS_BOAT_X, OBS_BOAT_Z = 0, 2
 OBS_TGT_X, OBS_TGT_Z = 7, 9

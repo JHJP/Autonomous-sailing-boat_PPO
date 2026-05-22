@@ -114,10 +114,10 @@ def make_learning_curves(results_dir: Path, out_dir: Path, seeds: list[int]) -> 
 
 
 def make_success_bar(agg_csv: Path, out_dir: Path) -> None:
-    # Dot + 95% CI (forest plot), NOT a bar chart. The finding is a three-way ceiling
-    # tie; bars on a truncated y-axis would imply a magnitude-from-zero gap that the
-    # statistics (Welch p > 0.05) explicitly reject. Interval markers on a zoomed axis
-    # show the CI overlap honestly without implying a baseline.
+    # Dot + 95% CI (forest plot), NOT a bar chart. PPO and SAC sit at the ceiling with
+    # overlapping CIs (a tie); Rainbow DQN trails with a clearly separated, lower CI.
+    # Bars from zero would distort the small absolute spread; the zoomed forest plot
+    # shows both the PPO/SAC overlap and the Rainbow gap honestly.
     df = pd.read_csv(agg_csv)
     order = ["sac", "ppo", "rainbow"]
     df = df.set_index("algo").reindex(order).reset_index()
@@ -128,7 +128,8 @@ def make_success_bar(agg_csv: Path, out_dir: Path) -> None:
     fig, ax = plt.subplots(figsize=(5.5, 4))
     x = np.arange(len(order))
     for i, a in enumerate(order):
-        yerr = np.array([[iqm[i] - lo[i]], [hi[i] - iqm[i]]])
+        # clip tiny negatives from degenerate CIs (zero-variance seeds → CI is a point)
+        yerr = np.clip(np.array([[iqm[i] - lo[i]], [hi[i] - iqm[i]]]), 0.0, None)
         ax.errorbar(x[i], iqm[i], yerr=yerr, fmt=ALGO_MARKERS[a], color=ALGO_COLORS[a],
                     markersize=9, capsize=6, elinewidth=1.6, capthick=1.6,
                     markeredgecolor="black", markeredgewidth=0.6)
@@ -138,7 +139,8 @@ def make_success_bar(agg_csv: Path, out_dir: Path) -> None:
     ax.set_xticklabels([ALGO_LABELS[a] for a in order])
     ax.set_xlim(-0.5, len(order) - 0.5 + 0.4)
     ax.set_ylabel("Success rate (%)")
-    ax.set_ylim(98.0, 100.4)
+    # span all CIs with margin (Rainbow's lower bound now well below the PPO/SAC ceiling)
+    ax.set_ylim(float(np.floor(lo.min() - 1.5)), 100.6)
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
     out_path = out_dir / "fig_success_bar.png"
