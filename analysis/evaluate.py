@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -142,6 +143,14 @@ def classify(reward: float, interrupted: bool, goal_threshold: float = 0.5, wall
     return "timeout"  # fallback (shouldn't trigger given sparse ±1 reward)
 
 
+# obs layout (11-d effective; see MoveToGoalAgent.cs CollectObservations):
+#   [0,1,2] boat localPosition (x,y,z) ; [3-6] rotation quat ; [7,8,9] target localPosition ;
+#   [10] WeatherVane.x ([11] WeatherVane.z truncated by VectorObservationSize=11).
+# Boat moves in the x-z plane → 2D = (obs[0], obs[2]); destination = (obs[7], obs[9]).
+OBS_BOAT_X, OBS_BOAT_Z = 0, 2
+OBS_TGT_X, OBS_TGT_Z = 7, 9
+
+
 def evaluate_one(
     policy,
     binary: Path,
@@ -151,8 +160,13 @@ def evaluate_one(
     max_env_steps: int,
     algo: str,
     seed_label: str,
+    traj_sink: list | None = None,
 ) -> list[dict]:
-    """Run frozen policy until n_episodes accumulated across 16 agents."""
+    """Run frozen policy until n_episodes accumulated across 16 agents.
+
+    If traj_sink is not None, append one trajectory dict per closed episode:
+    {algo, seed, agent_id, episode_idx, outcome, steps, target:[x,z], path:[[x,z],...]}.
+    """
     env = UnityEnvironment(
         file_name=str(binary),
         worker_id=worker_id,
@@ -166,6 +180,9 @@ def evaluate_one(
     ep_steps: dict[int, int] = {}
     env_steps = 0
     episode_idx_per_agent: dict[int, int] = {}
+    log_traj = traj_sink is not None
+    ep_path: dict[int, list] = {}      # agent_id -> [[x,z], ...]
+    ep_target: dict[int, list] = {}    # agent_id -> [tx, tz]
 
     while len(ep_records) < n_episodes and env_steps < max_env_steps:
         decision_steps, terminal_steps = env.get_steps(behavior_name)
@@ -176,6 +193,21 @@ def evaluate_one(
             term_rew = float(terminal_steps.reward[idx])
             interrupted = bool(terminal_steps.interrupted[idx])
             outcome = classify(term_rew, interrupted)
+            if log_traj:
+                tobs = terminal_steps.obs[0][idx]
+                ep_path.setdefault(agent_id, []).append(
+                    [float(tobs[OBS_BOAT_X]), float(tobs[OBS_BOAT_Z])])
+                tgt = ep_target.get(agent_id, [float(tobs[OBS_TGT_X]), float(tobs[OBS_TGT_Z])])
+                traj_sink.append({
+                    "algo": algo,
+                    "seed": seed_label,
+                    "agent_id": agent_id,
+                    "episode_idx": episode_idx_per_agent.get(agent_id, 0),
+                    "outcome": outcome,
+                    "steps": ep_steps.get(agent_id, 0),
+                    "target": tgt,
+                    "path": ep_path.get(agent_id, []),
+                })
             ep_records.append({
                 "algo": algo,
                 "seed": seed_label,
@@ -188,6 +220,9 @@ def evaluate_one(
             })
             episode_idx_per_agent[agent_id] = episode_idx_per_agent.get(agent_id, 0) + 1
             ep_steps[agent_id] = 0
+            if log_traj:
+                ep_path[agent_id] = []
+                ep_target.pop(agent_id, None)
             if len(ep_records) >= n_episodes:
                 break
 
@@ -198,6 +233,11 @@ def evaluate_one(
         if len(decision_steps) > 0:
             agent_ids = [int(a) for a in decision_steps.agent_id]
             obs = np.asarray(decision_steps.obs[0], dtype=np.float32)
+            if log_traj:
+                for j, aid in enumerate(agent_ids):
+                    ep_path.setdefault(aid, []).append(
+                        [float(obs[j][OBS_BOAT_X]), float(obs[j][OBS_BOAT_Z])])
+                    ep_target.setdefault(aid, [float(obs[j][OBS_TGT_X]), float(obs[j][OBS_TGT_Z])])
             joint = policy.predict(obs)  # (n, 2) int32
             env.set_actions(behavior_name, ActionTuple(discrete=joint))
             for aid in agent_ids:
@@ -240,11 +280,14 @@ def main() -> None:
                    help="Safety cap on env steps per (algo, seed) eval — avoid hangs.")
     p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     p.add_argument("--algos", type=str, nargs="+", default=["sac", "ppo", "rainbow"])
+    p.add_argument("--log-trajectories", action="store_true",
+                   help="Also dump per-episode (x,z) paths to eval_trajectories.json (for Fig 10).")
     args = p.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     all_episodes: list[dict] = []
+    trajectories: list[dict] = [] if args.log_trajectories else None
     worker_id_counter = 50  # avoid clash with training-time worker_ids 0,1,2
 
     for algo in args.algos:
@@ -275,6 +318,7 @@ def main() -> None:
                 max_env_steps=args.max_env_steps,
                 algo=algo,
                 seed_label=str(seed),
+                traj_sink=trajectories,
             )
             worker_id_counter += 1
             all_episodes.extend(recs)
@@ -292,6 +336,13 @@ def main() -> None:
             w.writeheader()
             w.writerows(all_episodes)
     print(f"[done] per-episode → {per_ep_path}")
+
+    # Trajectory dump (for Fig 10)
+    if trajectories is not None:
+        traj_path = args.out_dir / "eval_trajectories.json"
+        with open(traj_path, "w") as f:
+            json.dump(trajectories, f)
+        print(f"[done] trajectories ({len(trajectories)}) → {traj_path}")
 
     # Per-seed summary
     summary_rows = []
