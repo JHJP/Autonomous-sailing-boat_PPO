@@ -9,8 +9,10 @@ Discrete action space: Unity exposes (3, 3) joint discrete. We flatten to Discre
     action_int = steer_idx * 3 + motor_idx,
     where steer_idx, motor_idx ∈ {0, 1, 2}.
 
-Vector observation: 11-d (Environment.prefab VectorObservationSize=11). v1 code emits
-12 floats but Behavior Parameters truncates the trailing component (Quaternion.w).
+Vector observation: 12-d (Environment.prefab VectorObservationSize=12). C# emits 12
+floats: boat localPosition (3) + rotation quaternion (4) + target localPosition (3) +
+weather-vane x, z (2). obs_dim is read dynamically from the env spec at runtime.
+(Pre-2026-05-22 builds set size=11, truncating the trailing vane.z; restored here.)
 
 Usage:
     conda activate tianshou
