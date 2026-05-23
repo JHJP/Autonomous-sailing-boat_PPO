@@ -133,6 +133,11 @@ def make_success_bar(agg_csv: Path, out_dir: Path) -> None:
         ax.errorbar(x[i], iqm[i], yerr=yerr, fmt=ALGO_MARKERS[a], color=ALGO_COLORS[a],
                     markersize=9, capsize=6, elinewidth=1.6, capthick=1.6,
                     markeredgecolor="black", markeredgewidth=0.6)
+        # degenerate (zero-width) CI: draw a short horizontal cap so the point-interval
+        # reads as intentional rather than a missing whisker (PPO: 3 identical seeds).
+        if (hi[i] - lo[i]) < 0.01:
+            ax.plot([x[i] - 0.11, x[i] + 0.11], [iqm[i], iqm[i]],
+                    color=ALGO_COLORS[a], lw=1.6, solid_capstyle="butt", zorder=2)
         ax.annotate(f"{iqm[i]:.2f}%", xy=(x[i], iqm[i]), xytext=(12, 0),
                     textcoords="offset points", ha="left", va="center", fontsize=9)
     ax.set_xticks(x)
