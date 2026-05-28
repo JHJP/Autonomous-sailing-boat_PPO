@@ -1,12 +1,13 @@
 """Regenerate the v1 network-architecture diagrams at 300 DPI (no Unity needed).
 
+Layer-box style (IEEE Access / mainstream ML literature convention):
+each layer = one rectangle with size + activation, arrows between, grouped
+input/output items shown as sub-items inside the relevant boxes. Compact
+(~25% column height) and column-width-safe.
+
 Replaces the low-res (~96 DPI) v1 figures:
     fig_policy_net.png  <- v1 Figure 7 (policy network)  -- FAITHFUL 12-d input / 2-branch out
     fig_value_net.png   <- v1 Figure 8 (value network)   -- FAITHFUL 12-d input / scalar out
-
-Out of scope here (user supplies own high-res from PPTX): the RL agent-environment loop
-(v1 Fig 1) and the PPO training pipeline (v1 Fig 6). Unity-screenshot figures (env, boat
-close-ups, arena grid, inspector) are re-captured in the Editor at high resolution.
 
 Usage:
     python code/analysis/diagrams.py
@@ -15,118 +16,105 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
+from matplotlib.patches import FancyBboxPatch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = PROJECT_ROOT / "analysis" / "figures"
 
 plt.rcParams.update({
-    "font.size": 12,
+    "font.size": 9,
     "savefig.bbox": "tight",
     "savefig.dpi": 300,
 })
 
-NODE_FC = "#e8643c"   # warm accent for network nodes (CVD-safe vs black text)
+INPUT_FILL = "#dbeafe"   # light blue (input)
+HIDDEN_FILL = "#f4f4f4"  # neutral gray (hidden)
+OUTPUT_FILL = "#fde2c4"  # light orange (output)
+EDGE = "black"
 
 
-# ──────────────────── Fig 7 / 8: network architecture (faithful) ────────────────────
-
-# True observation = 12 floats (see MoveToGoalAgent.cs + Environment.prefab):
-#   boat localPosition (3) + orientation quaternion (4) + target localPosition (3)
-#   + weather-vane x, z (2) = full 2-D wind direction.
-# (VectorObservationSize=12 since 2026-05-22; earlier builds set 11 and truncated vane.z.)
-INPUT_LABELS = [
-    r"$b_x$", r"$b_y$", r"$b_z$",
-    r"$q_x$", r"$q_y$", r"$q_z$", r"$q_w$",
-    r"$d_x$", r"$d_y$", r"$d_z$",
-    r"$v_x$", r"$v_z$",
-]
-INPUT_GROUPS = [  # (start_idx, end_idx_inclusive, label)
-    (0, 2, "boat\nposition (3)"),
-    (3, 6, "orientation\n(quaternion, 4)"),
-    (7, 9, "destination (3)"),
-    (10, 11, "wind\ndirection (2)"),
-]
+def _box(ax, x, y_center, w, h, text, fill):
+    """Rounded rectangle with multi-line left-aligned text inside."""
+    patch = FancyBboxPatch(
+        (x, y_center - h / 2), w, h,
+        boxstyle="round,pad=0.02,rounding_size=0.06",
+        facecolor=fill, edgecolor=EDGE, linewidth=1.0,
+    )
+    ax.add_patch(patch)
+    ax.text(x + 0.10, y_center, text, ha="left", va="center", fontsize=9)
 
 
-def _node(ax, x, y, r=0.13, fc=NODE_FC):
-    ax.add_patch(Circle((x, y), r, facecolor=fc, edgecolor="black", linewidth=0.8, zorder=3))
+def _arrow(ax, x, y0, y1):
+    ax.annotate(
+        "", xy=(x, y1), xytext=(x, y0),
+        arrowprops=dict(arrowstyle="-|>", lw=1.0, color=EDGE,
+                        shrinkA=0, shrinkB=0, mutation_scale=10),
+    )
 
 
-def _draw_net(ax, output_nodes_y, output_labels, output_group_labels):
-    """Shared MLP skeleton: 11 inputs -> 128 -> 128 -> output."""
-    xs = [0.0, 1.7, 3.4, 5.1]  # input, h1, h2, output
-    n_in = len(INPUT_LABELS)
-    in_y = np.linspace(0.5, n_in - 0.5, n_in)[::-1]
-    # hidden: show 6 nodes + ellipsis
-    hid_y = np.linspace(1.0, n_in - 1.0, 6)[::-1]
+def _draw_layer_stack(ax, output_lines, output_box_h):
+    """Stack: Input box → FC1 → FC2 → Output box.
 
-    # connections (representative, light)
-    for y0 in in_y:
-        for y1 in hid_y:
-            ax.plot([xs[0], xs[1]], [y0, y1], color="#cccccc", linewidth=0.4, zorder=1)
-    for y0 in hid_y:
-        for y1 in hid_y:
-            ax.plot([xs[1], xs[2]], [y0, y1], color="#cccccc", linewidth=0.4, zorder=1)
-    for y0 in hid_y:
-        for y1 in output_nodes_y:
-            ax.plot([xs[2], xs[3]], [y0, y1], color="#cccccc", linewidth=0.4, zorder=1)
+    output_lines: list of text lines for the Output box (header + optional sub-items).
+    output_box_h: height for the Output box (depends on number of lines).
+    """
+    box_x = 0.20
+    box_w = 3.10
 
-    # input nodes + labels + group brackets
-    for y, lab in zip(in_y, INPUT_LABELS):
-        _node(ax, xs[0], y, fc="#5ba0d0")
-        ax.text(xs[0] - 0.35, y, lab, ha="right", va="center", fontsize=11)
-    for s, e, glab in INPUT_GROUPS:
-        ytop, ybot = in_y[s] + 0.28, in_y[e] - 0.28
-        ax.plot([xs[0] - 1.05, xs[0] - 1.05], [ybot, ytop], color="black", linewidth=1.2)
-        ax.plot([xs[0] - 1.05, xs[0] - 0.95], [ytop, ytop], color="black", linewidth=1.2)
-        ax.plot([xs[0] - 1.05, xs[0] - 0.95], [ybot, ybot], color="black", linewidth=1.2)
-        ax.text(xs[0] - 1.2, (ytop + ybot) / 2, glab, ha="right", va="center", fontsize=9.5)
+    input_lines = (
+        "Input (12)\n"
+        "    ├ boat position (3)\n"
+        "    ├ orientation quaternion (4)\n"
+        "    ├ destination position (3)\n"
+        "    └ wind direction (2)"
+    )
 
-    # hidden nodes + ellipsis + size label
-    for xi in (xs[1], xs[2]):
-        for y in hid_y:
-            _node(ax, xi, y)
-        ax.text(xi, 0.1, r"$\vdots$", ha="center", va="center", fontsize=16)
-        ax.text(xi, n_in + 0.2, "128", ha="center", va="center", fontsize=10)
-    ax.text((xs[1] + xs[2]) / 2, n_in + 0.9, "hidden layers (2)", ha="center", fontsize=10)
+    # Layout from top down. Y positions are box centers.
+    in_h = 1.30
+    fc_h = 0.45
+    gap = 0.22
 
-    # output nodes + labels
-    for y, lab in zip(output_nodes_y, output_labels):
-        _node(ax, xs[3], y, fc="#e8643c")
-        ax.text(xs[3] + 0.32, y, lab, ha="left", va="center", fontsize=11)
-    for (gy0, gy1, glab) in output_group_labels:
-        ax.text(xs[3] + 1.35, (gy0 + gy1) / 2, glab, ha="left", va="center", fontsize=9.5)
+    y_in = 4.30
+    y_fc1 = y_in - in_h / 2 - gap - fc_h / 2
+    y_fc2 = y_fc1 - fc_h - gap
+    y_out = y_fc2 - fc_h / 2 - gap - output_box_h / 2
 
-    ax.text(xs[0], n_in + 0.9, f"input ({n_in})", ha="center", fontsize=10)
-    ax.set_xlim(-3.0, 7.2); ax.set_ylim(-0.5, n_in + 1.4)
+    _box(ax, box_x, y_in, box_w, in_h, input_lines, INPUT_FILL)
+    _box(ax, box_x, y_fc1, box_w, fc_h, "Fully Connected 128 + ReLU", HIDDEN_FILL)
+    _box(ax, box_x, y_fc2, box_w, fc_h, "Fully Connected 128 + ReLU", HIDDEN_FILL)
+    _box(ax, box_x, y_out, box_w, output_box_h, "\n".join(output_lines), OUTPUT_FILL)
+
+    # Arrows: each connects the bottom of the upper box to the top of the lower box.
+    arrow_x = box_x + box_w / 2
+    _arrow(ax, arrow_x, y_in - in_h / 2, y_fc1 + fc_h / 2)
+    _arrow(ax, arrow_x, y_fc1 - fc_h / 2, y_fc2 + fc_h / 2)
+    _arrow(ax, arrow_x, y_fc2 - fc_h / 2, y_out + output_box_h / 2)
+
+    y_bot = y_out - output_box_h / 2
+    ax.set_xlim(0, 3.5)
+    ax.set_ylim(y_bot - 0.15, y_in + in_h / 2 + 0.15)
+    ax.set_aspect("auto")
     ax.axis("off")
 
 
 def make_policy_net() -> None:
-    fig, ax = plt.subplots(figsize=(8.5, 5.6))
-    # MultiDiscrete(3,3): two branches — steer {L,0,R}, motor {F,0,B}
-    steer_y = [9.2, 8.2, 7.2]
-    motor_y = [4.0, 3.0, 2.0]
-    out_y = steer_y + motor_y
-    out_lab = [r"$a^{s}_{L}$", r"$a^{s}_{0}$", r"$a^{s}_{R}$",
-               r"$a^{m}_{F}$", r"$a^{m}_{0}$", r"$a^{m}_{B}$"]
-    grp = [(steer_y[0], steer_y[-1], "steer\nbranch (3)"),
-           (motor_y[0], motor_y[-1], "motor\nbranch (3)")]
-    _draw_net(ax, out_y, out_lab, grp)
-    ax.text(5.1, 11.0, "output:\nMultiDiscrete(3,3)", ha="center", fontsize=10)
+    fig, ax = plt.subplots(figsize=(3.5, 3.4))
+    output_lines = [
+        "Output: MultiDiscrete(3, 3)",
+        "    ├ steer (3): softmax",
+        "    └ motor (3): softmax",
+    ]
+    _draw_layer_stack(ax, output_lines, output_box_h=0.85)
     fig.tight_layout()
     out = OUT_DIR / "fig_policy_net.png"
     fig.savefig(out); plt.close(fig); print(f"[done] {out}")
 
 
 def make_value_net() -> None:
-    fig, ax = plt.subplots(figsize=(8.5, 5.6))
-    out_y = [5.5]
-    _draw_net(ax, out_y, [r"$v(s_t)$"], [(5.5, 5.5, "state value")])
-    ax.text(5.1, 11.0, "output:\nscalar value", ha="center", fontsize=10)
+    fig, ax = plt.subplots(figsize=(3.5, 3.0))
+    output_lines = ["Output: scalar  v(s_t)"]
+    _draw_layer_stack(ax, output_lines, output_box_h=0.45)
     fig.tight_layout()
     out = OUT_DIR / "fig_value_net.png"
     fig.savefig(out); plt.close(fig); print(f"[done] {out}")

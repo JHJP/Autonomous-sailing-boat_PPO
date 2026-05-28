@@ -28,13 +28,14 @@ ALGO_LABELS = {"sac": "SAC", "ppo": "PPO", "rainbow": "Rainbow DQN"}
 # Redundant marker encoding so interval/scatter figures stay legible in grayscale / CVD.
 ALGO_MARKERS = {"sac": "o", "ppo": "s", "rainbow": "D"}
 
-# Shared typography so all figures render at a consistent size side-by-side in the paper.
+# Shared typography sized for IEEE Access single-column native render (~3.5" width).
+# Lower base fontsize so 1:1 paste into one column keeps body text at ~9pt on the page.
 plt.rcParams.update({
-    "font.size": 11,
-    "axes.labelsize": 12,
-    "xtick.labelsize": 11,
-    "ytick.labelsize": 11,
-    "legend.fontsize": 10,
+    "font.size": 9,
+    "axes.labelsize": 10,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "legend.fontsize": 8,
     "savefig.bbox": "tight",
 })
 
@@ -64,7 +65,7 @@ def interpolate_to_common_grid(curves: list[tuple[np.ndarray, np.ndarray]], n_po
 
 
 def make_learning_curves(results_dir: Path, out_dir: Path, seeds: list[int]) -> None:
-    fig, ax = plt.subplots(figsize=(7, 4.5))
+    fig, ax = plt.subplots(figsize=(3.5, 2.6))
     for algo in ["sac", "ppo", "rainbow"]:
         curves = []
         for s in seeds:
@@ -76,11 +77,9 @@ def make_learning_curves(results_dir: Path, out_dir: Path, seeds: list[int]) -> 
                 curves.append(curve)
         if not curves:
             continue
-        # Per-seed thin lines (de-emphasized so the mean + band carries the message)
+        # Per-seed thin lines dropped — they add visual noise without aiding interpretation;
+        # the shaded bootstrap CI already carries seed dispersion.
         color = ALGO_COLORS[algo]
-        for s_idx, (steps, vals) in enumerate(curves):
-            ax.plot(steps, vals, color=color, alpha=0.12, linewidth=0.5,
-                    label=None)
         # Per-algo mean + bootstrap band on common grid
         grid, arr = interpolate_to_common_grid(curves)
         if arr.size == 0:
@@ -97,14 +96,16 @@ def make_learning_curves(results_dir: Path, out_dir: Path, seeds: list[int]) -> 
         hi = np.quantile(boots, 0.975, axis=0)
         ax.plot(grid, mean, color=color, linewidth=2.2, label=ALGO_LABELS[algo])
         ax.fill_between(grid, lo, hi, color=color, alpha=0.18)
-    ax.set_xlabel("Environment steps")
-    ax.set_ylabel("Cumulative reward (episode mean)")
-    # Reward is sparse-terminal, hard-bounded to [-1, 1]. No data exists beyond +/-1.0;
-    # the small +/-0.05 margin only lifts the spine off the ceiling/floor data so it
-    # is not visually amputated by the frame (not a claim of headroom past the bound).
+    import matplotlib.ticker as mticker
+    ax.set_xlabel(r"Environment steps ($\times 10^{6}$)")
+    ax.set_ylabel("Episode reward")
+    ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{v/1e6:.0f}"))
+    # Reward bounded to [-1, 1] by sparse terminal. Tight ylim crops wasted vertical space.
     ax.set_ylim(-1.05, 1.05)
-    ax.axhline(0, color="gray", linewidth=0.5, linestyle=":")
-    ax.legend(loc="lower right")
+    ax.axhline(0, color="gray", linewidth=0.6, linestyle=":")
+    # Legend above plot so it never overlaps rising curves (esp. Rainbow's late approach to 1).
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=3,
+              frameon=False, fontsize=8, handlelength=1.4, columnspacing=1.0)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     out_path = out_dir / "fig_learning_curves.png"
@@ -125,21 +126,21 @@ def make_success_bar(agg_csv: Path, out_dir: Path) -> None:
     lo = df["ci_lo"].values * 100
     hi = df["ci_hi"].values * 100
 
-    fig, ax = plt.subplots(figsize=(5.5, 4))
+    fig, ax = plt.subplots(figsize=(3.5, 2.6))
     x = np.arange(len(order))
     for i, a in enumerate(order):
-        # clip tiny negatives from degenerate CIs (zero-variance seeds → CI is a point)
         yerr = np.clip(np.array([[iqm[i] - lo[i]], [hi[i] - iqm[i]]]), 0.0, None)
-        ax.errorbar(x[i], iqm[i], yerr=yerr, fmt=ALGO_MARKERS[a], color=ALGO_COLORS[a],
-                    markersize=9, capsize=6, elinewidth=1.6, capthick=1.6,
-                    markeredgecolor="black", markeredgewidth=0.6)
-        # degenerate (zero-width) CI: draw a short horizontal cap so the point-interval
-        # reads as intentional rather than a missing whisker (PPO: 3 identical seeds).
+        # Degenerate (zero-width) CI cap drawn FIRST so the marker overlays it on top
+        # (PPO: 3 identical seeds → CI is a point; without an explicit cap the whisker
+        # would be invisible and the marker alone has no width cue).
         if (hi[i] - lo[i]) < 0.01:
-            ax.plot([x[i] - 0.11, x[i] + 0.11], [iqm[i], iqm[i]],
-                    color=ALGO_COLORS[a], lw=1.6, solid_capstyle="butt", zorder=2)
+            ax.plot([x[i] - 0.13, x[i] + 0.13], [iqm[i], iqm[i]],
+                    color=ALGO_COLORS[a], lw=1.8, solid_capstyle="butt", zorder=2)
+        ax.errorbar(x[i], iqm[i], yerr=yerr, fmt=ALGO_MARKERS[a], color=ALGO_COLORS[a],
+                    markersize=11, capsize=6, elinewidth=1.6, capthick=1.6,
+                    markeredgecolor="black", markeredgewidth=0.8, zorder=4)
         ax.annotate(f"{iqm[i]:.2f}%", xy=(x[i], iqm[i]), xytext=(12, 0),
-                    textcoords="offset points", ha="left", va="center", fontsize=9)
+                    textcoords="offset points", ha="left", va="center", fontsize=9, zorder=5)
     ax.set_xticks(x)
     ax.set_xticklabels([ALGO_LABELS[a] for a in order])
     ax.set_xlim(-0.5, len(order) - 0.5 + 0.4)
@@ -161,7 +162,7 @@ def make_steps_box(per_ep_csv: Path, out_dir: Path) -> None:
     data = [goal_df[goal_df["algo"] == a]["steps"].values for a in order]
 
     box_w = 0.5
-    fig, ax = plt.subplots(figsize=(5.5, 4))
+    fig, ax = plt.subplots(figsize=(3.5, 2.6))
     bp = ax.boxplot(
         data,
         widths=box_w,
@@ -174,13 +175,21 @@ def make_steps_box(per_ep_csv: Path, out_dir: Path) -> None:
         patch.set_facecolor(ALGO_COLORS[a])
         patch.set_alpha(0.7)
     means = [d.mean() for d in data]
-    ax.scatter(range(1, len(order) + 1), means, marker="D", color="black", s=30, zorder=10, label="mean")
+    ax.scatter(range(1, len(order) + 1), means, marker="D", color="black", s=30, zorder=10)
     # Label sits in the inter-box gap (clear of the colored fill) for readability.
     for i, m in enumerate(means):
         ax.text(i + 1 + box_w / 2 + 0.04, m, f"{m:.1f}", ha="left", va="center", fontsize=9)
     ax.set_xlim(0.5, len(order) + 0.6)
+    # Tight ylim — whiskers max ~125 (Rainbow); cap at 130 to avoid wasted space above 100.
+    whisker_max = max(np.percentile(d, 75) + 1.5 * (np.percentile(d, 75) - np.percentile(d, 25)) for d in data)
+    ax.set_ylim(0, max(110, whisker_max * 1.05))
     ax.set_ylabel("Steps to goal")
-    ax.legend(loc="upper right")
+    # Inline mean indicator — matplotlib legend handles render artifacts with marker-only proxies,
+    # so we annotate directly in axes coordinates using a Unicode diamond glyph.
+    # Upper-left corner avoids Rainbow DQN's tall whisker that occupies the upper-right region.
+    ax.text(0.03, 0.96, "◆  mean", transform=ax.transAxes,
+            ha="left", va="top", fontsize=8,
+            bbox=dict(facecolor="white", alpha=0.9, edgecolor="gray", linewidth=0.5, pad=2.0))
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
     out_path = out_dir / "fig_steps_box.png"
@@ -189,7 +198,7 @@ def make_steps_box(per_ep_csv: Path, out_dir: Path) -> None:
     print(f"[done] {out_path}")
 
 
-def make_trajectory(traj_json: Path, out_dir: Path, n_success: int = 6) -> None:
+def make_trajectory(traj_json: Path, out_dir: Path, n_success: int = 4) -> None:
     """Fig 10: one panel per algo, several representative successful (x,z) paths +
     any wall-failure path overlaid. No wind overlay (sim wind is spatially uniform)."""
     import json
@@ -222,14 +231,13 @@ def make_trajectory(traj_json: Path, out_dir: Path, n_success: int = 6) -> None:
     xpad = 0.05 * (max(xs) - min(xs)); zpad = 0.05 * (max(zs) - min(zs))
     xlim = (min(xs) - xpad, max(xs) + xpad); zlim = (min(zs) - zpad, max(zs) + zpad)
 
-    # Print-target sizing: IEEE Access 2-column full-text-width span ≈ 7.16".
-    # Render at the actual paste width so 9–10pt fonts stay 9–10pt on the page
-    # (the earlier (13, 6) figsize scaled to ~0.55× in Word, dropping body to ~6pt).
+    # Print-target sizing: IEEE Access single-column native render (~3.5" wide).
+    # Three algos stacked vertically since 3 panels won't fit side-by-side in one column.
     with plt.rc_context({
         "font.size": 9, "axes.labelsize": 10, "axes.titlesize": 10,
         "xtick.labelsize": 8, "ytick.labelsize": 8, "legend.fontsize": 8,
     }):
-        fig, axes = plt.subplots(1, len(order), figsize=(7.16, 3.2), sharex=True, sharey=True)
+        fig, axes = plt.subplots(len(order), 1, figsize=(3.5, 7.2), sharex=True, sharey=True)
         for ax, algo in zip(axes, order):
             goals = [t for t in trajs if t["algo"] == algo and t["outcome"] == "goal"]
             walls = [t for t in trajs if t["algo"] == algo and t["outcome"] == "wall"]
@@ -252,12 +260,13 @@ def make_trajectory(traj_json: Path, out_dir: Path, n_success: int = 6) -> None:
                 ax.plot(d[0], d[1], marker="*", color="black", markersize=9, zorder=6)
                 ax.plot(p[-1, 0], p[-1, 1], marker="x", color="#d62728", markersize=8,
                         markeredgewidth=1.8, zorder=7)
-            ax.set_title(ALGO_LABELS[algo])
-            ax.set_xlabel("x position")
+            # Title coloured by algorithm — visual anchor that doubles as in-panel legend.
+            ax.set_title(ALGO_LABELS[algo], color=ALGO_COLORS[algo], fontweight="bold")
+            ax.set_ylabel("z position")
             ax.set_xlim(xlim); ax.set_ylim(zlim)
             ax.set_aspect("equal", adjustable="box")
             ax.grid(True, alpha=0.3)
-        axes[0].set_ylabel("z position")
+        axes[-1].set_xlabel("x position")
         # Single shared legend.
         handles = [
             plt.Line2D([], [], marker="o", color="gray", markeredgecolor="black",
