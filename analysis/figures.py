@@ -222,50 +222,57 @@ def make_trajectory(traj_json: Path, out_dir: Path, n_success: int = 6) -> None:
     xpad = 0.05 * (max(xs) - min(xs)); zpad = 0.05 * (max(zs) - min(zs))
     xlim = (min(xs) - xpad, max(xs) + xpad); zlim = (min(zs) - zpad, max(zs) + zpad)
 
-    fig, axes = plt.subplots(1, len(order), figsize=(13, 6.0), sharex=True, sharey=True)
-    for ax, algo in zip(axes, order):
-        goals = [t for t in trajs if t["algo"] == algo and t["outcome"] == "goal"]
-        walls = [t for t in trajs if t["algo"] == algo and t["outcome"] == "wall"]
-        # Pick a spread of successful episodes by target location for visual variety.
-        goals = sorted(goals, key=lambda t: (t["target"][0], t["target"][1]))
-        step = max(1, len(goals) // n_success)
-        picks = goals[::step][:n_success]
-        color = ALGO_COLORS[algo]
-        for t in picks:
-            p = np.array(t["path"]); d = dest_of(t)
-            ax.plot(p[:, 0], p[:, 1], color=color, alpha=0.7, linewidth=1.3)
-            ax.plot(p[0, 0], p[0, 1], marker="o", color=color, markersize=6,
-                    markeredgecolor="black", markeredgewidth=0.5, zorder=5)
-            ax.plot(d[0], d[1], marker="*", color="black", markersize=12, zorder=6)
-        for t in walls[:1]:  # show one real failure if it exists for this algo
-            p = np.array(t["path"]); d = dest_of(t)
-            ax.plot(p[:, 0], p[:, 1], color="#444444", alpha=0.9, linewidth=1.4, linestyle="--")
-            ax.plot(p[0, 0], p[0, 1], marker="o", color="#444444", markersize=6,
-                    markeredgecolor="black", markeredgewidth=0.5, zorder=5)
-            ax.plot(d[0], d[1], marker="*", color="black", markersize=12, zorder=6)
-            ax.plot(p[-1, 0], p[-1, 1], marker="x", color="#d62728", markersize=10,
-                    markeredgewidth=2.0, zorder=7)
-        ax.set_title(ALGO_LABELS[algo])
-        ax.set_xlabel("x position")
-        ax.set_xlim(xlim); ax.set_ylim(zlim)
-        ax.set_aspect("equal", adjustable="box")
-        ax.grid(True, alpha=0.3)
-    axes[0].set_ylabel("z position")
-    # Single shared legend.
-    handles = [
-        plt.Line2D([], [], marker="o", color="gray", markeredgecolor="black",
-                   linestyle="-", label="start → path"),
-        plt.Line2D([], [], marker="*", color="black", linestyle="None", markersize=12, label="destination"),
-        plt.Line2D([], [], color="#444444", linestyle="--",
-                   marker="x", markerfacecolor="#d62728", markeredgecolor="#d62728",
-                   label="wall failure"),
-    ]
-    fig.tight_layout(rect=(0, 0.09, 1, 1))
-    fig.legend(handles=handles, loc="lower center", ncol=3, frameon=True,
-               bbox_to_anchor=(0.5, 0.015))
-    out_path = out_dir / "fig_trajectories.png"
-    fig.savefig(out_path, dpi=300)
-    plt.close(fig)
+    # Print-target sizing: IEEE Access 2-column full-text-width span ≈ 7.16".
+    # Render at the actual paste width so 9–10pt fonts stay 9–10pt on the page
+    # (the earlier (13, 6) figsize scaled to ~0.55× in Word, dropping body to ~6pt).
+    with plt.rc_context({
+        "font.size": 9, "axes.labelsize": 10, "axes.titlesize": 10,
+        "xtick.labelsize": 8, "ytick.labelsize": 8, "legend.fontsize": 8,
+    }):
+        fig, axes = plt.subplots(1, len(order), figsize=(7.16, 3.2), sharex=True, sharey=True)
+        for ax, algo in zip(axes, order):
+            goals = [t for t in trajs if t["algo"] == algo and t["outcome"] == "goal"]
+            walls = [t for t in trajs if t["algo"] == algo and t["outcome"] == "wall"]
+            # Pick a spread of successful episodes by target location for visual variety.
+            goals = sorted(goals, key=lambda t: (t["target"][0], t["target"][1]))
+            step = max(1, len(goals) // n_success)
+            picks = goals[::step][:n_success]
+            color = ALGO_COLORS[algo]
+            for t in picks:
+                p = np.array(t["path"]); d = dest_of(t)
+                ax.plot(p[:, 0], p[:, 1], color=color, alpha=0.7, linewidth=1.2)
+                ax.plot(p[0, 0], p[0, 1], marker="o", color=color, markersize=4.5,
+                        markeredgecolor="black", markeredgewidth=0.5, zorder=5)
+                ax.plot(d[0], d[1], marker="*", color="black", markersize=9, zorder=6)
+            for t in walls[:1]:  # show one real failure if it exists for this algo
+                p = np.array(t["path"]); d = dest_of(t)
+                ax.plot(p[:, 0], p[:, 1], color="#444444", alpha=0.9, linewidth=1.3, linestyle="--")
+                ax.plot(p[0, 0], p[0, 1], marker="o", color="#444444", markersize=4.5,
+                        markeredgecolor="black", markeredgewidth=0.5, zorder=5)
+                ax.plot(d[0], d[1], marker="*", color="black", markersize=9, zorder=6)
+                ax.plot(p[-1, 0], p[-1, 1], marker="x", color="#d62728", markersize=8,
+                        markeredgewidth=1.8, zorder=7)
+            ax.set_title(ALGO_LABELS[algo])
+            ax.set_xlabel("x position")
+            ax.set_xlim(xlim); ax.set_ylim(zlim)
+            ax.set_aspect("equal", adjustable="box")
+            ax.grid(True, alpha=0.3)
+        axes[0].set_ylabel("z position")
+        # Single shared legend.
+        handles = [
+            plt.Line2D([], [], marker="o", color="gray", markeredgecolor="black",
+                       linestyle="-", label="start → path"),
+            plt.Line2D([], [], marker="*", color="black", linestyle="None", markersize=9, label="destination"),
+            plt.Line2D([], [], color="#444444", linestyle="--",
+                       marker="x", markerfacecolor="#d62728", markeredgecolor="#d62728",
+                       label="wall failure"),
+        ]
+        fig.tight_layout(rect=(0, 0.10, 1, 1))
+        fig.legend(handles=handles, loc="lower center", ncol=3, frameon=True,
+                   bbox_to_anchor=(0.5, 0.015))
+        out_path = out_dir / "fig_trajectories.png"
+        fig.savefig(out_path, dpi=300)
+        plt.close(fig)
     print(f"[done] {out_path}")
 
 
