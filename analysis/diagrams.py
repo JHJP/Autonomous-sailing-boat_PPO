@@ -59,15 +59,15 @@ def _draw_layer_stack(ax, output_lines, output_box_h):
     output_lines: list of text lines for the Output box (header + optional sub-items).
     output_box_h: height for the Output box (depends on number of lines).
     """
-    box_x = 0.20
-    box_w = 3.10
+    box_x = 0.12
+    box_w = 3.30
 
     input_lines = (
         "Input (12)\n"
-        "    ├ boat position (3)\n"
-        "    ├ orientation quaternion (4)\n"
-        "    ├ destination position (3)\n"
-        "    └ wind direction (2)"
+        "  ├ boat position ($b_x$, $b_y$, $b_z$)\n"
+        "  ├ orientation quaternion ($q_x$, $q_y$, $q_z$, $q_w$)\n"
+        "  ├ destination position ($d_x$, $d_y$, $d_z$)\n"
+        "  └ wind direction ($v_x$, $v_z$)"
     )
 
     # Layout from top down. Y positions are box centers.
@@ -92,7 +92,7 @@ def _draw_layer_stack(ax, output_lines, output_box_h):
     _arrow(ax, arrow_x, y_fc2 - fc_h / 2, y_out + output_box_h / 2)
 
     y_bot = y_out - output_box_h / 2
-    ax.set_xlim(0, 3.5)
+    ax.set_xlim(0, 3.55)
     ax.set_ylim(y_bot - 0.15, y_in + in_h / 2 + 0.15)
     ax.set_aspect("auto")
     ax.axis("off")
@@ -102,8 +102,8 @@ def make_policy_net() -> None:
     fig, ax = plt.subplots(figsize=(3.5, 3.4))
     output_lines = [
         "Output: MultiDiscrete(3, 3)",
-        "    ├ steer (3): softmax",
-        "    └ motor (3): softmax",
+        "  ├ steer: {turn left, neutral, turn right}",
+        "  └ motor: {forward, neutral, backward}",
     ]
     _draw_layer_stack(ax, output_lines, output_box_h=0.85)
     fig.tight_layout()
@@ -113,7 +113,7 @@ def make_policy_net() -> None:
 
 def make_value_net() -> None:
     fig, ax = plt.subplots(figsize=(3.5, 3.0))
-    output_lines = ["Output: scalar  v(s_t)"]
+    output_lines = ["Output: scalar  $v(s_t)$"]
     _draw_layer_stack(ax, output_lines, output_box_h=0.45)
     fig.tight_layout()
     out = OUT_DIR / "fig_value_net.png"
