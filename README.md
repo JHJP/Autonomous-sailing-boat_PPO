@@ -53,7 +53,7 @@ paper_results/          evaluation CSVs + figures exactly as reported in the pap
 
 ### 1. Unity
 
-- Unity Editor **2022.3.62f3** (open this folder as a project in Unity Hub)
+- Unity Editor **2022.3.62f3**, installed through [Unity Hub](https://unity.com/download) (open this folder as a project). When installing, add the **Build Support** module for your OS (Mac / Windows / Linux; the Dedicated Server variant if you want a headless build) — it is needed to build the simulator in step 3.
 - ML-Agents Unity package `com.unity.ml-agents` **2.3.0-exp.2** (already pinned in `Packages/manifest.json`)
 
 ### 2. Python — two separate conda environments
@@ -80,7 +80,7 @@ Versions used for the paper: mlagents 0.30.0, torch 1.11.0, numpy 1.21.2 (env a)
 
 ### 3. Build the headless simulator (needed for B and C)
 
-The Python scripts launch the simulator as a standalone executable.
+The Python scripts launch the simulator as a standalone executable. The executable is not included in this repository; build it for your own machine.
 
 1. In Unity: `File → Build Settings…`
 2. Make sure `Assets/Scenes/Buyoancy.unity` is in the scene list.
