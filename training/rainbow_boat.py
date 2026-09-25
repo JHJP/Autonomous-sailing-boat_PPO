@@ -16,7 +16,7 @@ weather-vane x, z (2). obs_dim is read dynamically from the env spec at runtime.
 
 Usage:
     conda activate tianshou
-    python code/training/rainbow_boat.py --seed 0 --run-id rainbow_seed_0 --total-steps 5000000
+    python training/rainbow_boat.py --seed 0 --run-id rainbow_seed_0 --total-steps 5000000
 
 TB logs use ml-agents-compatible tags:
     Environment/Cumulative Reward   (per-episode return, logged on terminal)
@@ -50,8 +50,8 @@ from tianshou.utils.net.common import Net
 from tianshou.utils.net.discrete import NoisyLinear
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BINARY = PROJECT_ROOT / "code" / "Builds" / "BoatSailing_Mac"  # no .app suffix; mlagents auto-appends
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_BINARY = REPO_ROOT / "Builds" / "BoatSailing_Mac"  # no .app suffix; mlagents auto-appends
 
 
 def build_rainbow_net(state_shape, action_shape, num_atoms: int, noisy_std: float, hidden_sizes):
@@ -91,7 +91,7 @@ def main() -> None:
     p.add_argument("--run-id", type=str, default="rainbow_seed_0")
     p.add_argument("--total-steps", type=int, default=5_000_000)
     p.add_argument("--binary", type=Path, default=DEFAULT_BINARY)
-    p.add_argument("--log-dir", type=Path, default=PROJECT_ROOT / "code" / "results")
+    p.add_argument("--log-dir", type=Path, default=REPO_ROOT / "results")
     p.add_argument("--device", type=str, default="cpu")
     # Rainbow hyperparameters
     p.add_argument("--num-atoms", type=int, default=51)
@@ -112,8 +112,9 @@ def main() -> None:
     p.add_argument("--summary-freq", type=int, default=2_000)
     args = p.parse_args()
 
-    if not args.binary.with_suffix(".app").exists():
-        raise FileNotFoundError(f"Standalone not found: {args.binary}.app — build it first.")
+    # mlagents-envs appends the platform suffix itself (.app / .x86_64 / .exe).
+    if not any(Path(f"{args.binary}{ext}").exists() for ext in ("", ".app", ".x86_64", ".exe")):
+        raise FileNotFoundError(f"Standalone not found: {args.binary}[.app|.x86_64|.exe] — build it first.")
 
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)

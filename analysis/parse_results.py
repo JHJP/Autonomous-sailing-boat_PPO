@@ -28,12 +28,12 @@ numpy 1.21.2 / torch 1.11.0:
 
 Usage:
     conda activate analysis
-    python code/analysis/parse_results.py \\
-        --results-dir code/results \\
+    python analysis/parse_results.py \\
+        --results-dir results \\
         --runs ppo:ppo_seed_0,ppo_seed_1,ppo_seed_2 \\
         --runs sac:sac_seed_0,sac_seed_1,sac_seed_2 \\
         --runs rainbow:rainbow_seed_0,rainbow_seed_1,rainbow_seed_2 \\
-        --out-dir analysis
+        --out-dir outputs
 """
 from __future__ import annotations
 
@@ -138,11 +138,11 @@ def parse_algo_spec(spec: str) -> AlgoSpec:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--results-dir", type=Path, default=Path("code/results"),
+    p.add_argument("--results-dir", type=Path, default=Path("results"),
                    help="Directory containing run-id subdirs.")
     p.add_argument("--runs", action="append", required=True,
                    help="Repeat per algo: --runs algoname:run-id-1,run-id-2,run-id-3")
-    p.add_argument("--out-dir", type=Path, default=Path("analysis"))
+    p.add_argument("--out-dir", type=Path, default=Path("outputs"))
     p.add_argument("--last-n-windows", type=int, default=20,
                    help="Final summary windows averaged for per-seed final-perf scalar.")
     p.add_argument("--n-boot", type=int, default=10_000)

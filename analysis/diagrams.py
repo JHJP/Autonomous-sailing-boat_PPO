@@ -10,7 +10,7 @@ Replaces the low-res (~96 DPI) v1 figures:
     fig_value_net.png   <- v1 Figure 8 (value network)   -- FAITHFUL 12-d input / scalar out
 
 Usage:
-    python code/analysis/diagrams.py
+    python analysis/diagrams.py
 """
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-OUT_DIR = PROJECT_ROOT / "analysis" / "figures"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+OUT_DIR = REPO_ROOT / "outputs" / "figures"
 
 plt.rcParams.update({
     "font.size": 9,

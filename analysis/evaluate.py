@@ -6,13 +6,13 @@ matching the training distribution). Decomposes outcomes that training-time mean
 reward cannot: goal / wall / timeout / steps-to-goal.
 
 Outputs:
-    analysis/eval_per_episode.csv      one row per episode
-    analysis/eval_per_seed_summary.csv aggregates per (algo, seed)
-    analysis/eval_algo_aggregate.csv   IQM + 95% bootstrap CI per algo (Agarwal 2021)
+    outputs/eval_per_episode.csv      one row per episode
+    outputs/eval_per_seed_summary.csv aggregates per (algo, seed)
+    outputs/eval_algo_aggregate.csv   IQM + 95% bootstrap CI per algo (Agarwal 2021)
 
 Usage:
     conda activate tianshou
-    python code/analysis/evaluate.py --episodes-per-seed 200
+    python analysis/evaluate.py --episodes-per-seed 200
 
 Notes:
     - Uses raw mlagents-envs API (16 agents in Buyoancy.unity scene; UnityToGymWrapper
@@ -46,8 +46,8 @@ from tianshou.utils.net.common import Net
 from tianshou.utils.net.discrete import NoisyLinear
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BINARY = PROJECT_ROOT / "code" / "Builds" / "BoatSailing_Mac"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_BINARY = REPO_ROOT / "Builds" / "BoatSailing_Mac"
 
 
 # ─────────────────────── Policy abstractions ───────────────────────
@@ -278,8 +278,8 @@ def bootstrap_iqm_ci(values: np.ndarray, n_boot: int = 10_000, alpha: float = 0.
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--binary", type=Path, default=DEFAULT_BINARY)
-    p.add_argument("--results-dir", type=Path, default=PROJECT_ROOT / "code" / "results")
-    p.add_argument("--out-dir", type=Path, default=PROJECT_ROOT / "analysis")
+    p.add_argument("--results-dir", type=Path, default=REPO_ROOT / "results")
+    p.add_argument("--out-dir", type=Path, default=REPO_ROOT / "outputs")
     p.add_argument("--episodes-per-seed", type=int, default=200)
     p.add_argument("--max-env-steps", type=int, default=200_000,
                    help="Safety cap on env steps per (algo, seed) eval — avoid hangs.")

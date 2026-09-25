@@ -9,11 +9,11 @@
 # Unity sim + 1 trainer ~= 1.5 cores; 6 fits the 10 P-cores with headroom.
 #
 # Usage:
-#   bash code/training/run_retrain_obs12.sh            # MAX=6
-#   MAX=9 bash code/training/run_retrain_obs12.sh       # push all 9
-# Logs: code/results/<run-id>/train_stdout.log
+#   bash training/run_retrain_obs12.sh            # MAX=6
+#   MAX=9 bash training/run_retrain_obs12.sh       # push all 9
+# Logs: results/<run-id>/train_stdout.log
 set -uo pipefail
-cd "$(dirname "$0")/.."   # -> code/
+cd "$(dirname "$0")/.."   # -> repo root
 
 ENV_NOEXT="Builds/BoatSailing_Mac"   # mlagents + rainbow auto-append .app
 MAX="${MAX:-6}"

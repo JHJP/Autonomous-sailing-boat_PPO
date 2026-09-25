@@ -1,13 +1,14 @@
 """Generate IEEE-Access-ready figures from training TB events + frozen-eval CSVs.
 
 Outputs (300 DPI PNGs):
-    analysis/figures/fig_learning_curves.png   per-algo mean curve + per-seed thin lines
-    analysis/figures/fig_success_bar.png       success rate bar with 95% bootstrap CI
-    analysis/figures/fig_steps_box.png         steps-to-goal box plot per algo
+    <analysis-dir>/figures/fig_learning_curves.png   per-algo mean curve + per-seed thin lines
+    <analysis-dir>/figures/fig_success_bar.png       success rate bar with 95% bootstrap CI
+    <analysis-dir>/figures/fig_steps_box.png         steps-to-goal box plot per algo
 
 Usage:
     conda activate tianshou       # tianshou env has numpy/pandas/matplotlib + tensorboard
-    python code/analysis/figures.py
+    python analysis/figures.py                              # from outputs/
+    python analysis/figures.py --analysis-dir paper_results  # from the paper's eval CSVs
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ import matplotlib.pyplot as plt
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Okabe-Ito colorblind-safe palette (safe for deuteranopia/protanopia/tritanopia).
 ALGO_COLORS = {"sac": "#0072B2", "ppo": "#E69F00", "rainbow": "#009E73"}
@@ -42,9 +43,12 @@ plt.rcParams.update({
 
 def load_reward_curve(run_dir: Path) -> tuple[np.ndarray, np.ndarray] | None:
     # ml-agents nests events under <run_dir>/<behavior_name>/
+    # Read only the newest event file: a re-run into the same run_dir leaves the older
+    # file behind, and loading the whole directory would concatenate both runs.
     for sub in run_dir.iterdir():
-        if sub.is_dir() and any(p.name.startswith("events.out.tfevents") for p in sub.iterdir() if p.is_file()):
-            ea = EventAccumulator(str(sub), size_guidance={"scalars": 0})
+        event_files = sorted(p for p in sub.glob("events.out.tfevents*") if p.is_file()) if sub.is_dir() else []
+        if event_files:
+            ea = EventAccumulator(str(event_files[-1]), size_guidance={"scalars": 0})
             ea.Reload()
             if "Environment/Cumulative Reward" not in ea.Tags()["scalars"]:
                 return None
@@ -287,8 +291,8 @@ def make_trajectory(traj_json: Path, out_dir: Path, n_success: int = 4) -> None:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--results-dir", type=Path, default=PROJECT_ROOT / "code" / "results")
-    p.add_argument("--analysis-dir", type=Path, default=PROJECT_ROOT / "analysis")
+    p.add_argument("--results-dir", type=Path, default=REPO_ROOT / "results")
+    p.add_argument("--analysis-dir", type=Path, default=REPO_ROOT / "outputs")
     p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     args = p.parse_args()
 
